@@ -24,12 +24,12 @@ if st.session_state.role is None:
     st.subheader("在开店之前，请选择你的店长人设：")
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("学术型店长 (科研背景，擅长逻辑分析)"):
+        if st.button("牛马型店长 (大厂背景，擅长熬夜加班"):
             st.session_state.role = "Scholar"
             st.session_state.reputation += 10
             st.rerun()
     with col2:
-        if st.button("社牛型店长 (口才极佳，大客户概率增加)"):
+        if st.button("文艺型店长 (口才极佳，从风花雪夜到人生哲学)"):
             st.session_state.role = "Social"
             st.rerun()
     with col3:
