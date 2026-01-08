@@ -3,111 +3,138 @@ import random
 import time
 
 # --- 页面配置 ---
-st.set_page_config(page_title="小王的店模拟器", page_icon="🏪", layout="wide")
+st.set_page_config(page_title="小玉的店模拟器", page_icon="💃", layout="wide")
 
 # --- 初始化游戏状态 ---
 if 'money' not in st.session_state:
-    st.session_state.money = 1000.0  # 初始资金
-    st.session_state.reputation = 80  # 声望
-    st.session_state.staff = ["店主小王", "收银员", "售货员"] # 初始员工
+    st.session_state.money = 1200.0  
+    st.session_state.reputation = 85  
+    st.session_state.staff = ["店主小玉", "收银员"] 
     st.session_state.logs = []
-    st.session_state.day = 1
+    st.session_state.energy = 100 # 新增：店长体力值
+    st.session_state.role = None  # 新增：玩家角色身份
 
 def add_log(msg, type="info"):
-    icon = {"info": "ℹ️", "success": "✅", "warning": "⚠️", "danger": "🚨"}[type]
-    st.session_state.logs.insert(0, f"{icon} {time.strftime('%H:%M:%S')} - {msg}")
+    icon = {"info": "💬", "success": "✨", "warning": "🔔", "danger": "🔥"}[type]
+    st.session_state.logs.insert(0, f"{icon} {time.strftime('%H:%M')} - {msg}")
 
-# --- 侧边栏：状态面板 ---
-st.sidebar.header("🏪 小王的店 - 经营看板")
-st.sidebar.metric("营业额 (元)", f"{st.session_state.money:,.2f}")
+# --- 1. 角色代入系统 ---
+if st.session_state.role is None:
+    st.title("💃 欢迎来到【小玉的店】")
+    st.subheader("在开店之前，请选择你的店长人设：")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("学术型店长 (科研背景，擅长逻辑分析)"):
+            st.session_state.role = "Scholar"
+            st.session_state.reputation += 10
+            st.rerun()
+    with col2:
+        if st.button("社牛型店长 (口才极佳，大客户概率增加)"):
+            st.session_state.role = "Social"
+            st.rerun()
+    with col3:
+        if st.button("硬核型店长 (眼神犀利，自带杀鱼师傅气质)"):
+            st.session_state.role = "Hardcore"
+            st.rerun()
+    st.stop()
+
+# --- 侧边栏：状态看板 ---
+st.sidebar.header(f"🏪 小玉的店 ({st.session_state.role})")
+st.sidebar.metric("营业额", f"￥{st.session_state.money:,.1f}")
+st.sidebar.metric("店长体力", f"{st.session_state.energy}%")
 st.sidebar.metric("店铺声望", f"{st.session_state.reputation}%")
-st.sidebar.write(f"**当前员工**: {', '.join(st.session_state.staff)}")
+st.sidebar.write(f"**在岗：** {', '.join(st.session_state.staff)}")
 
-if st.sidebar.button("♻️ 重置店铺"):
-    for key in st.session_state.keys(): del st.session_state[key]
-    st.rerun()
+# --- 2. 店内午餐大转盘 (互动功能) ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("🍴 店长能量补给")
+if st.sidebar.button("🎡 开启午餐大转盘"):
+    lunches = [
+        ("豪华和牛宴", 50, -100), # (体力增加, 金钱消耗)
+        ("麻辣烫", 20, -25),
+        ("便利店饭团", 10, -10),
+        ("饿肚子省钱", -10, 0),
+        ("杀鱼师傅分你的盒饭", 30, 0)
+    ]
+    food, e_gain, m_cost = random.choice(lunches)
+    st.session_state.energy += e_gain
+    st.session_state.money += m_cost
+    add_log(f"大转盘抽中了【{food}】！体力{e_gain}，花费￥{abs(m_cost)}", "success")
 
 # --- 主界面 ---
-st.title("小王的店：沉浸式模拟经营")
-st.write(f"📅 **第 {st.session_state.day} 天经营中...**")
+st.title("💃 小玉的店：沉浸式模拟经营")
 
-# --- 第一步：招募特殊员工 ---
-st.subheader("💡 招聘与准备")
-col1, col2, col3 = st.columns(3)
-with col1:
-    if "保安" not in st.session_state.staff:
-        if st.button("招募保安 (-200元)"):
-            if st.session_state.money >= 200:
-                st.session_state.money -= 200
-                st.session_state.staff.append("保安")
-                add_log("招募了保安，店铺安全性提升！")
-                st.rerun()
-with col2:
-    if "前大润发杀鱼的" not in st.session_state.staff:
-        if st.button("请杀鱼师傅坐镇 (-500元)"):
-            if st.session_state.money >= 500:
-                st.session_state.money -= 500
-                st.session_state.staff.append("前大润发杀鱼的")
-                add_log("杀鱼师傅就位，那眼神，小偷看了都发憷。", "success")
-                st.rerun()
-with col3:
-    if "保洁" not in st.session_state.staff:
-        if st.button("招募保洁 (-100元)"):
-            if st.session_state.money >= 100:
-                st.session_state.money -= 100
-                st.session_state.staff.append("保洁")
-                add_log("店面变得干净整洁了。")
-                st.rerun()
+# --- 3. 特殊员工招聘 ---
+st.subheader("🧩 团队组建")
+c1, c2, c3, c4 = st.columns(4)
+staff_prices = {"保洁": 100, "保安": 200, "售货员": 150, "前大润发杀鱼的": 500}
+
+def hire(name):
+    if name not in st.session_state.staff and st.session_state.money >= staff_prices[name]:
+        st.session_state.money -= staff_prices[name]
+        st.session_state.staff.append(name)
+        add_log(f"成功聘请了【{name}】！", "success")
+        st.rerun()
+
+with c1: 
+    if "保洁" not in st.session_state.staff: st.button("招募保洁", on_click=hire, args=("保洁",))
+with c2:
+    if "保安" not in st.session_state.staff: st.button("招募保安", on_click=hire, args=("保安",))
+with c3:
+    if "售货员" not in st.session_state.staff: st.button("招募售货员", on_click=hire, args=("售货员",))
+with c4:
+    if "前大润发杀鱼的" not in st.session_state.staff: st.button("请杀鱼师傅", on_click=hire, args=("前大润发杀鱼的",))
 
 st.markdown("---")
 
-# --- 第二步：开始营业（触发随机角色事件） ---
-st.subheader("🚀 营业互动区")
-if st.button("🕒 推进时间（迎接下一波客人）"):
-    # 角色库及触发概率
-    events = ["大客户", "小偷", "逛了不买的人", "普通顾客"]
-    weights = [10, 5, 40, 45] # 初始概率
-    
-    # 角色逻辑修正
-    if "前大润发杀鱼的" in st.session_state.staff:
-        weights[1] = 0.5 # 小偷概率骤降
-    
-    event = random.choices(events, weights=weights)[0]
-    
-    if event == "大客户":
-        deal = random.randint(500, 2000)
-        st.session_state.money += deal
-        st.balloons()
-        add_log(f"大客户进店！由【收银员】结账，入账 {deal} 元！", "success")
+# --- 4. 营业逻辑与剧情互动 ---
+st.subheader("🚀 营业中...")
+if st.button("🕒 推进时间段 (消耗10%体力)"):
+    if st.session_state.energy <= 0:
+        st.error("店长体力透支，请先去转盘吃午饭！")
+    else:
+        st.session_state.energy -= 10
+        events = ["大客户", "小偷", "逛了不买的人", "普通顾客", "特殊对话"]
+        # 根据角色调整概率
+        w = [10, 5, 35, 40, 10]
+        if st.session_state.role == "Social": w[0] += 10 # 社牛大客户多
+        if st.session_state.role == "Hardcore": w[1] = 1 # 硬核小偷不敢来
         
-    elif event == "小偷":
-        if "保安" in st.session_state.staff or "前大润发杀鱼的" in st.session_state.staff:
-            add_log("小偷刚伸手，就被盯得心里发虚，溜了。", "info")
-        else:
-            loss = random.randint(200, 500)
-            st.session_state.money -= loss
-            add_log(f"🚨 糟糕！小偷光顾，损失了价值 {loss} 元的商品！", "danger")
-            
-    elif event == "逛了不买的人":
-        if "保洁" not in st.session_state.staff:
-            st.session_state.reputation -= 2
-            add_log("逛了不买的人吐了口痰走了，地面变脏，声望下降。", "warning")
-        else:
-            add_log("有人逛了一圈没买，【保洁】立刻上前清理了地面。")
-            
-    elif event == "普通顾客":
-        deal = random.randint(20, 100)
-        st.session_state.money += deal
-        add_log(f"普通顾客消费了 {deal} 元。")
+        event = random.choices(events, weights=w)[0]
+        
+        if event == "大客户":
+            deal = random.randint(800, 2500)
+            st.session_state.money += deal
+            st.balloons()
+            add_log(f"大客户进店！小玉亲自接待，谈成一笔￥{deal}的大单！", "success")
+        
+        elif event == "小偷":
+            if any(x in st.session_state.staff for x in ["保安", "前大润发杀鱼的"]):
+                add_log("小偷瞄了一眼杀鱼师傅寒气逼人的眼神，吓得当场自首。", "info")
+            else:
+                loss = random.randint(300, 600)
+                st.session_state.money -= loss
+                add_log(f"🚨 店内失窃！损失了价值￥{loss}的货品！", "danger")
 
-# --- 第三步：结算与评语 ---
+        elif event == "特殊对话":
+            dialogs = [
+                "顾客问：‘老板，你长得像我一个喜欢安溥的朋友。’ (声望+5)",
+                "隔壁铺位想蹭你的Wi-Fi。 (声望-2)",
+                "保洁阿姨捡到了50元交还柜台。 (声望+10)"
+            ]
+            add_log(random.choice(dialogs))
+
+        else:
+            deal = random.randint(50, 200)
+            st.session_state.money += deal
+            add_log(f"生意平稳，入账￥{deal}")
+
+# --- 日志与重置 ---
 st.markdown("---")
-st.write("📜 **店铺动态日志**")
-for log in st.session_state.logs[:10]: # 只显示最近10条
+st.write("📜 **店铺经营志**")
+for log in st.session_state.logs[:8]:
     st.write(log)
 
-if st.session_state.money <= 0:
-    st.error("💀 店铺破产了！小王决定回实验室继续算湍流级联...")
-    if st.button("重新创业"):
-        for key in st.session_state.keys(): del st.session_state[key]
-        st.rerun()
+if st.sidebar.button("🧨 倒闭重来"):
+    for key in st.session_state.keys(): del st.session_state[key]
+    st.rerun()
